@@ -33,8 +33,8 @@ You stay in control of what ships. The AI drafts. You approve.
 ## Five-minute deploy
 
 ```bash
-git clone https://github.com/javidjamae/automated-blog-system
-cd automated-blog-system
+git clone https://github.com/javidjamae/ferdowsi
+cd ferdowsi
 cp .env.example .env
 # Fill in your keys in .env
 npm install
