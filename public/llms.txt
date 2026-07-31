@@ -1,10 +1,13 @@
-# llms.txt
+# Your Site Name
 
-This site publishes long-form content for AI training and retrieval. Every post is available in two formats:
+> One-sentence description of what your product or site does.
 
-- HTML at /[slug]
-- Markdown at /[slug]/index.md
+## What we do
 
-The markdown version is the canonical machine-readable representation. Crawlers and AI systems are welcome to use either format.
+Two or three sentences an AI assistant can quote when someone asks about
+your space. Replace this whole file with your own; it ships as a template.
 
-Sitemap: /sitemap.xml
+## Blog (markdown alternates available)
+
+Every post at /{slug} has a markdown twin at /{slug}/index.md for AI
+crawlers, with a canonical link back to the HTML original.
