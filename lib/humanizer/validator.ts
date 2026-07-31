@@ -1,4 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk';
+import { runLLM } from '@/lib/llm';
 
 const VALIDATOR_PROMPT = `Read this draft. For each of the following criteria, return PASS or FAIL.
 
@@ -17,30 +17,16 @@ Draft:
 const MAX_ITERATIONS = 3;
 
 export async function validateAndRewrite(draft: string): Promise<string> {
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   let current = draft;
 
   for (let i = 0; i < MAX_ITERATIONS; i++) {
-    const response = await client.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 6000,
+    const text = await runLLM('validate', VALIDATOR_PROMPT + current, {
+      maxTokens: 6000,
       temperature: 0.2,
-      messages: [{ role: 'user', content: VALIDATOR_PROMPT + current }],
     });
 
-    const text = response.content
-      .filter((b) => b.type === 'text')
-      .map((b) => (b as { type: 'text'; text: string }).text)
-      .join('');
-
-    if (text.startsWith('PASS')) {
-      return current;
-    }
-
-    if (text.trim() === current.trim()) {
-      return current;
-    }
-
+    if (text.startsWith('PASS')) return current;
+    if (text.trim() === current.trim()) return current;
     current = text;
   }
 

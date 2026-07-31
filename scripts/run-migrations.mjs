@@ -1,39 +1,60 @@
 #!/usr/bin/env node
-// Lightweight migration runner for the scaffold.
-// Reads supabase/migrations/*.sql in order, executes each via the Supabase REST API.
+// Migration runner: applies db/migrations/*.sql in filename order against
+// DATABASE_URL, recording each in schema_migrations so re-runs are no-ops.
+// Works the same against local Postgres and Supabase (it's all Postgres).
 //
-// For production you probably want supabase CLI migrations:
-//   https://supabase.com/docs/guides/cli/local-development#database-migrations
-// This script exists so the scaffold's `npm run db:migrate` works out of the box.
+//   DATABASE_URL=postgres://... npm run db:migrate
 
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import pg from 'pg';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const MIGRATIONS_DIR = path.join(__dirname, '..', 'supabase', 'migrations');
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const MIGRATIONS_DIR = path.join(__dirname, '..', 'db', 'migrations');
 
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!url || !serviceKey) {
-  console.error('Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in env.');
+const url = process.env.DATABASE_URL;
+if (!url) {
+  console.error('DATABASE_URL is not set. See .env.example.');
   process.exit(1);
 }
 
-const files = (await readdir(MIGRATIONS_DIR))
-  .filter((f) => f.endsWith('.sql'))
-  .sort();
+const client = new pg.Client({
+  connectionString: url,
+  ssl: /localhost|127\.0\.0\.1/.test(url) ? undefined : { rejectUnauthorized: false },
+});
 
-console.log(`Found ${files.length} migration(s):`);
-for (const f of files) console.log(`  - ${f}`);
+await client.connect();
+await client.query(`
+  CREATE TABLE IF NOT EXISTS schema_migrations (
+    filename   text PRIMARY KEY,
+    applied_at timestamptz NOT NULL DEFAULT now()
+  )
+`);
 
-console.log('\nApply migrations via the Supabase SQL editor or supabase CLI.');
-console.log('This runner currently only lists them — wire it up to your Postgres');
-console.log('client of choice (pg, postgres, supabase-js with execute_sql RPC, etc.).');
+const applied = new Set(
+  (await client.query('SELECT filename FROM schema_migrations')).rows.map((r) => r.filename)
+);
+const files = (await readdir(MIGRATIONS_DIR)).filter((f) => f.endsWith('.sql')).sort();
 
+let ran = 0;
 for (const f of files) {
+  if (applied.has(f)) continue;
   const sql = await readFile(path.join(MIGRATIONS_DIR, f), 'utf8');
-  console.log(`\n--- ${f} ---\n${sql}`);
+  console.log(`migrate: applying ${f}`);
+  try {
+    await client.query('BEGIN');
+    await client.query(sql);
+    await client.query('INSERT INTO schema_migrations (filename) VALUES ($1)', [f]);
+    await client.query('COMMIT');
+    ran++;
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error(`migrate: ${f} failed: ${err.message}`);
+    await client.end();
+    process.exit(1);
+  }
 }
+
+console.log(ran ? `migrate: ${ran} applied, up to date` : 'migrate: up to date');
+await client.end();

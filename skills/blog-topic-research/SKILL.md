@@ -1,6 +1,6 @@
 # blog-topic-research
 
-Generic topic research skill. Used by an optional agentic queue filler that consumes signals from `lib/signals/` and scores them against the strategy file.
+Generic topic research skill. Used by the queue filler: the model proposes topics grounded in the strategy file and scores them against the rubric below.
 
 > ⚠️ **Scaffold version.** The base scaffold's queue cron does scoring directly in `lib/topic-scoring.ts`. This skill file exists for runs where you want an LLM to do nuanced cross-checks against the strategy file rather than pure code scoring. The ABA-exclusive version of this skill includes production-tuned rubrics; this version is intentionally minimal.
 

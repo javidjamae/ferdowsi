@@ -1,55 +1,27 @@
-import type { Signal } from './signals/types';
+// Three-axis topic scoring (guide: Move 1). The LLM researcher scores each
+// candidate against the rubric in skills/blog-topic-research/SKILL.md and
+// returns the breakdown; these helpers turn a breakdown into a queue
+// decision. Tune the thresholds for your business.
 
-export interface ScoredSignal extends Signal {
-  score: number;
-  breakdown: {
-    gsc_evidence: number;
-    conversion_intent: number;
-    competition_gap: number;
-  };
+export interface ScoreBreakdown {
+  evidence: number; // 0-4: how proven is the demand
+  intent: number;   // 0-3: does the product solve the searcher's problem
+  gap: number;      // 0-3: can we beat what's already ranking
 }
 
-// Three-axis scoring rubric. Tune the weights and thresholds for your business.
-// See course Section 03 for the rationale.
-export function scoreSignal(signal: Signal): ScoredSignal {
-  const breakdown = {
-    gsc_evidence: scoreGscEvidence(signal),
-    conversion_intent: scoreConversionIntent(signal),
-    competition_gap: scoreCompetitionGap(signal),
-  };
-
-  const score =
-    breakdown.gsc_evidence +
-    breakdown.conversion_intent +
-    breakdown.competition_gap;
-
-  return { ...signal, score, breakdown };
-}
-
-function scoreGscEvidence(signal: Signal): number {
-  // 0-4 points based on whether we have GSC impressions for this topic.
-  if (signal.source === 'gsc') return 4;
-  if (signal.source === 'ga-gap') return 3;
-  if (signal.source === 'spyfu' || signal.source === 'ahrefs') return 2;
-  if (signal.source === 'reddit' || signal.source === 'skool') return 1;
-  return 0;
-}
-
-function scoreConversionIntent(_signal: Signal): number {
-  // 0-3 points. Cross-check against STRATEGY.md Problem statements.
-  // The scaffold returns a default 1. Override this with your own logic
-  // once you've calibrated against attributed signups.
-  return 1;
-}
-
-function scoreCompetitionGap(_signal: Signal): number {
-  // 0-3 points. Cross-check against SERP for the target query.
-  // The scaffold returns a default 1.
-  return 1;
+export function totalScore(b: ScoreBreakdown): number {
+  return clamp(b.evidence, 0, 4) + clamp(b.intent, 0, 3) + clamp(b.gap, 0, 3);
 }
 
 export function priorityFromScore(score: number): number {
-  if (score >= 8) return 1;
-  if (score >= 6) return 2;
-  return 3;
+  if (score >= 8) return 1; // write next
+  if (score >= 6) return 2; // soon
+  return 3;                 // backlog
+}
+
+/** Below this total, a candidate never enters the queue (anti-filler floor). */
+export const SCORE_FLOOR = 5;
+
+function clamp(n: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, Number(n) || 0));
 }

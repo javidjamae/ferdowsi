@@ -2,176 +2,102 @@
 
 > Ferdowsi spent thirty years writing the Shahnameh. Sixty thousand verses. One man, three decades, an entire culture preserved in long-form. This repo does the same job. With agents. In hours, not decades.
 
-A fully automated content engine that researches what to write, scores what's worth writing, drafts it in your voice, humanizes the prose, generates a hero image, and ships it to a fast static site. You can run it lights-out or keep yourself in the review loop. Either way, the bill comes in under twenty dollars a month.
+An open-source automated blog: an agent researches topics, writes in your voice, strips the AI tells, parks drafts for a twenty-second review, and publishes to a fast static site with markdown twins that AI assistants can cite. One Postgres database and one Anthropic key. That's the whole bill of materials.
+
+**This is the companion repo to the App Builders guide: [Building a Fully Automated Technical Blog](https://www.appbuilders.us/guides/automated-blog-system).** The guide is the strategy, tool-agnostic. This repo is the worked example: the guide handed to a coding agent with one instruction, "build this on Next.js, Postgres, and Vercel." Read the guide for the why. Clone this for a running starting point. Repeat the same play on your own stack if it differs.
 
 Named after [Ferdowsi](https://en.wikipedia.org/wiki/Ferdowsi), the tenth-century Persian poet who proved that one tireless writer with the right system can outlast empires.
 
-Part of the skill library from [App Builders Academy](https://www.appbuilders.us?utm_source=github&utm_medium=readme&utm_campaign=ferdowsi).
+## What's in the box
 
----
+- **Topic queue** (guide: Move 1). Seed topics from a file, or let the researcher propose scored candidates against your strategy. Dedup against everything queued and published. An anti-filler floor keeps weak topics out.
+- **Writer + humanizer** (Move 2). Drafts written against your strategy and reader files with the writer skill, then a two-stage humanizer: deterministic rules first, LLM validator second.
+- **GEO dual-format publishing** (Move 3). Every post renders as HTML for people and as `/slug/index.md` for AI crawlers, with the canonical Link header that makes dual-publishing safe. `llms.txt` template included.
+- **Review gate** (Move 4). Drafts park in a review queue. Side-by-side preview and markdown editor, approve or reject. Every overwrite snapshots to `content_revisions` first, and a truncation guard refuses a save that destroys most of a draft.
+- **A dashboard that shows you the whole map.** The admin mirrors the managed product's layout one-to-one. Live tabs: Overview, Ideas, Drafts, Posts, Runs. The others (Analytics, Activity, Configuration, Settings) are honest placeholders: each one tells you what you could build there, which guide section teaches it, and what the managed version does instead.
+- **Runs log.** Every pipeline job records what it did. Watch the system work without tailing logs.
 
-## What you actually get
+Configuration is files, on purpose: `strategy/STRATEGY.md`, `strategy/READER.md`, `strategy/SEED-TOPICS.md`, the skills in `skills/`, and `.env`. Edit them in git. That IS the config system.
 
-A blog that runs itself. Pick the cadence. Three posts a day, ten posts a day, two posts a week, one post a year. The system holds the same quality bar at any volume.
+## Run it locally first (no accounts, ~5 minutes)
 
-What it does for you, end to end:
-
-- **Researches topics.** Pulls real search demand from Google Search Console, real conversion data from Google Analytics, and (optionally) competitor gaps from SpyFu, Ahrefs, Reddit, and your community.
-- **Scores and prioritizes.** Every candidate gets scored against three axes: search evidence, conversion intent, and competition gap. Only the topics that can actually move revenue get queued.
-- **Drafts in your voice.** Loads your positioning file, your reader persona, and a writer skill calibrated to clear a ten-times-better-than-the-best-ranking-page quality bar.
-- **Strips the AI tells.** Two-stage humanizer. Deterministic rules first, LLM validator second. The output reads like a person wrote it because, effectively, your standards did.
-- **Generates the hero image.** Pluggable. Leonardo by default. Swap for Replicate, fal.ai, or anything that takes a prompt and returns a URL.
-- **Ships it.** Promotes approved drafts to a static-rendered Next.js site, dual-publishes as HTML and markdown for AI crawlers, revalidates the cache, indexes the sitemap.
-
-This is what a six-person content team does for a SaaS company. The team costs you fifty thousand a month. This costs you twenty.
-
----
-
-## Why this beats running WordPress
-
-WordPress was built for a different problem. You needed an admin UI because non-engineers wrote the posts. You needed plugins because the core was a CMS, not a site. You needed a database query on every page load because pages weren't static. You needed Yoast to think about SEO because the templates didn't.
-
-Ferdowsi has none of that, and you don't miss any of it:
-
-- **No admin UI to maintain.** The writer is an agent. Edits happen in markdown files or through the Claude Code CLI. When you want a new feature, you vibe-code it.
-- **No plugin sprawl.** SEO meta, sitemap, structured data, AI-crawler markdown alternates, image optimization — all native Next.js. No "install plugin, configure plugin, hope it doesn't break on the next major release."
-- **No database query on read.** Posts render as static HTML at the edge. Cache hit on every page view. Lighthouse scores in the high nineties without effort.
-- **No theme jail.** It's a Next.js app. You own every component. Want a different layout? Edit the JSX. Want a fully custom design system? Drop it in. Tailwind already wired up.
-- **No security surface.** No PHP runtime, no `wp-admin` to harden, no third-party plugins shipping CVEs. The attack surface is one Next.js app and a Postgres database.
-- **No content lock-in.** Your posts live in plain Postgres rows and plain markdown. Export them, fork them, move them. You're never trapped in someone else's CMS.
-
-WordPress made sense in 2005. In 2026, a Next.js app plus an agent writer plus a Postgres table is the new default.
-
----
-
-## Lights-out, or human-in-the-loop. Your call.
-
-The pipeline ships with a review gate baked in. Drafts park in `ready_for_review` and wait for your tap. Mobile-first admin UI. Approve from your phone in the morning, posts go live by lunch.
-
-When you trust the output, flip one flag in the config. The cron self-approves, the publisher promotes, you wake up to fresh posts. Same quality. Less involvement.
-
-Most operators run both modes at different times. Manual for the first thirty posts while you tune the strategy file and the scoring weights. Automatic once the rubric is calibrated. The system supports either without a code change.
-
----
-
-## Cost to run
-
-At one post per day, real numbers:
-
-- Anthropic API for writing and humanizing: about twelve dollars per month on Opus, six on Sonnet
-- Image generation via Leonardo: about fifteen dollars per month (skip or self-host to drop to zero)
-- Supabase free tier handles the first ten thousand posts
-- Vercel Hobby tier handles the cron and hosting
-
-Total at one post per day: under twenty dollars per month. Scale to ten posts per day and you're still under a hundred. There is no version of this where you're paying a human team's salary to do the same job.
-
----
-
-## Prerequisites
-
-- Node 20+
-- A Supabase project (free tier)
-- An Anthropic API key
-- A Google Search Console property and a Google Analytics 4 property
-- An image-generation API key (Leonardo by default, pluggable)
-
----
-
-## Five-minute deploy
+Everything works on your machine against a local Postgres. No Supabase project, no Vercel account, no provisioning.
 
 ```bash
 git clone https://github.com/javidjamae/ferdowsi
 cd ferdowsi
-cp .env.example .env
-# Fill in your keys in .env
 npm install
+
+# Any Postgres works. Docker is the fastest:
+docker run -d --name ferdowsi-pg -p 5432:5432 -e POSTGRES_PASSWORD=ferdowsi postgres:16
+
+cp .env.example .env
+# Set in .env:
+#   DATABASE_URL=postgres://postgres:ferdowsi@localhost:5432/postgres
+#   ANTHROPIC_API_KEY=sk-ant-...
+
 npm run db:migrate
 npm run dev
 ```
 
-Then ship it:
+Open http://localhost:3000/admin (no password needed in dev until you set `ADMIN_SECRET`). Add a topic in Ideas, hit "Draft next idea", review it in Drafts, approve, publish. Your post is live at http://localhost:3000/your-slug with its markdown twin at `/your-slug/index.md`.
+
+The crons are just authenticated GET routes, so you can drive the whole pipeline by hand while testing:
 
 ```bash
-vercel deploy
+curl -H "Authorization: Bearer $CRON_SECRET" "http://localhost:3000/api/cron/queue?force=1"
+curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/draft
+curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/publish
 ```
 
-Set the same env vars in the Vercel dashboard. The cron entries in `vercel.json` fire automatically.
+## Then take it live (Supabase + Vercel, ~1 hour)
 
----
+Same code, different connection string. Nothing else changes.
 
-## Configuration
+1. Create a Supabase project (free tier). Grab the connection string from the Connect panel; on Vercel use the **Transaction pooler** string.
+2. `DATABASE_URL=<that string> npm run db:migrate` to create the schema there. Moving local test data too? `pg_dump` your local database and restore it, it's all just Postgres.
+3. Push to GitHub, import the repo in Vercel, and set the env vars from your `.env` (`DATABASE_URL`, `ANTHROPIC_API_KEY`, `ADMIN_SECRET`, `CRON_SECRET`, `NEXT_PUBLIC_SITE_URL`).
+4. Deploy. The cron entries in `vercel.json` fire automatically: queue daily, draft daily, publish daily. Adjust the schedules to your cadence.
 
-Four files own the personality of your blog. Edit these:
+## Cost to run
 
-1. `strategy/STRATEGY.md` — your 4Ps positioning file (Problem, Promise, Process, Person). Loaded on every cron run.
-2. `strategy/READER.md` — a tight persona description for the writer to calibrate against.
-3. `lib/topic-scoring.ts` — the three-axis scoring rubric. Tune the weights for your business.
-4. `skills/write-blog-post/SKILL.md` — the writer prompt. The 10x quality bar and code-verification rule live here.
+- Anthropic API for research, writing, and validation: single-digit dollars per month at one post a day, model-dependent (`MODEL_WRITE` and friends in `.env` trade cost for quality per stage)
+- Postgres: local is free; the Supabase free tier holds years of posts
+- Vercel Hobby runs the site and the crons
+- Hero images: off by default (`IMAGE_PROVIDER=none`); wire any provider in `lib/image-gen.ts` when you want covers
 
----
+## What this repo deliberately doesn't include
+
+The guide teaches five moves. This repo fully implements Moves 1 through 4 plus the cron orchestration. **Move 5, the analytics feedback loop, is described in the guide and left for you to build**: the `analytics_search_console` and `content_metrics` tables are already migrated (matching the guide's schema), and the Analytics tab in the dashboard tells you exactly what goes there. That's not a tease, it's the honest line between a weekend scaffold and a production system. The dashboard's locked tabs map every other gap the same way.
+
+If you'd rather not own that build, there's a managed version of this same architecture, calibrated and supported. The honest build-vs-buy accounting, written to be evaluated by you or your coding agent, is in [docs/BUILD-VS-BUY.md](docs/BUILD-VS-BUY.md). The short version: building v1 is a weekend; trusting a pipeline unattended is the long pole. Watch it running end to end in [the training that pairs with the guide](https://www.appbuilders.us/freebies/automated-blog-system/training).
 
 ## Folder structure
 
 ```
 app/
-  api/
-    cron/
-      ingest-gsc/   # Nightly: pull GSC data into Postgres
-      ingest-ga/    # Nightly: pull GA4 data into Postgres
-      queue/        # Daily: score topics, fill content_ideas
-      draft/        # Hourly: write the next post, humanize, image-ify
-      publish/      # Hourly: promote approved drafts to public
-    admin/
-      publish/      # Manual approve endpoint
-  admin/
-    blog/           # Mobile-first review queue
-  [slug]/           # Dual-format renderer: HTML + .md
+  api/cron/
+    queue/          # Daily: seeds + LLM topic research, scored + deduped
+    draft/          # Daily: claim top idea, write, humanize, park for review
+    publish/        # Daily: promote approved drafts to the public site
+  admin/            # The dashboard (env-password gate, see ADMIN_SECRET)
+  [slug]/           # HTML renderer + /index.md markdown twin (canonical header)
+components/         # Dashboard components incl. the locked-tab showroom
+db/migrations/      # Plain SQL, applied by npm run db:migrate
+docs/BUILD-VS-BUY.md
 lib/
-  signals/          # Signal source registry (2 implemented, 5 pluggable)
+  db.ts             # The one Postgres seam (local or Supabase)
+  llm.ts            # The one Anthropic seam (per-stage models)
+  pipeline/         # queue / draft / publish, shared by crons + dashboard
   humanizer/        # Rules + LLM validator
-  topic-scoring.ts  # The scoring rubric
-  image-gen.ts      # Pluggable image generator
-skills/
-  blog-topic-research/  # Topic queue agent prompt
-  write-blog-post/      # Writer agent prompt
-strategy/
-  STRATEGY.md       # Your 4Ps positioning file
-  READER.md         # Your persona file
-supabase/
-  migrations/       # Five tables, one RPC
-public/
-  llms.txt          # AI discovery file
-vercel.json         # Cron schedule
+  markdown.ts       # Dependency-free markdown renderer
+  revisions.ts      # Snapshot-before-overwrite + truncation guard
+skills/             # The writer + researcher prompts (your voice lives here)
+strategy/           # STRATEGY.md, READER.md, SEED-TOPICS.md
 ```
-
----
-
-## Signal sources
-
-Pluggable via a clean interface. Two are wired up. Five are ready to enable.
-
-| Source | Status | Description |
-|---|---|---|
-| `gsc.ts` | implemented | Queries with impressions but no clicks |
-| `ga-gap.ts` | implemented | Landing pages with traffic but low conversion |
-| `spyfu.ts` | pluggable | Competitor keyword gap |
-| `ahrefs.ts` | pluggable | Content gap analysis |
-| `competitor-scraper.ts` | pluggable | Playwright scrape of competitor blogs |
-| `reddit.ts` | pluggable | Question-shaped post titles from configured subreddits |
-| `skool.ts` | pluggable | Recent comments and posts from your community |
-
-Each pluggable source is ~30 lines. Drop in an API key, flip `enabled: true`, you're done. Adding a new source later is a new file, not a refactor.
-
----
 
 ## License
 
 MIT. Use it, fork it, ship it.
 
-The production-tuned writer prompts, humanizer rule expansions, and per-business scoring rubrics that drive the App Builders Academy reference build are not in this repo. They live inside [App Builders Academy](https://www.appbuilders.us?utm_source=github&utm_medium=readme&utm_campaign=ferdowsi_license) along with the full course, the community, and the upgrade-as-you-go skill library.
-
----
-
-## Course
-
-Full build walkthrough on YouTube. Search "Build a WordPress Clone With AI Agent Writers." Four and a half hours. Every component in this repo, explained, on camera.
+The production-tuned prompts, quality gates, and integrations that drive the managed version are not in this repo; the guide teaches you how to build your own versions of all of them.

@@ -1,39 +1,30 @@
-import { supabaseAdmin } from './supabase';
-
 interface GenerateOptions {
   prompt: string;
   slug: string;
 }
 
-// Pluggable image generator. The scaffold ships with Leonardo.
-// Swap the implementation to use Replicate, fal.ai, OpenAI, etc.
-// The contract: take a prompt + slug, return a public URL.
-export async function generateImage({
-  prompt,
-  slug,
-}: GenerateOptions): Promise<string> {
-  if (!process.env.LEONARDO_API_KEY) {
-    throw new Error('LEONARDO_API_KEY not set. See .env.example.');
+// Pluggable hero-image seam. OFF by default: with IMAGE_PROVIDER unset the
+// pipeline publishes posts without a cover, which keeps the scaffold free to
+// run end to end. The contract for any provider: take a prompt + slug,
+// return a public image URL (or null for "no image").
+//
+// To wire a provider (Leonardo, Replicate, fal.ai, DALL-E, anything):
+//   1. Set IMAGE_PROVIDER=custom and your provider's API key in .env
+//   2. Implement the call below: create the generation, poll until ready,
+//      return a URL your blog can hot-link or that you re-host.
+export async function generateImage({ prompt, slug }: GenerateOptions): Promise<string | null> {
+  const provider = process.env.IMAGE_PROVIDER || 'none';
+  if (provider === 'none') return null;
+
+  if (provider === 'custom') {
+    // Implement your provider here. The shape, using Leonardo as the example:
+    //   const gen = await fetch('https://cloud.leonardo.ai/api/rest/v1/generations', {...})
+    //   const url = await pollUntilReady(gen.id)
+    //   return url
+    void prompt;
+    void slug;
+    throw new Error('IMAGE_PROVIDER=custom: implement your provider call in lib/image-gen.ts.');
   }
 
-  // STUB: Replace with the actual Leonardo API call. The scaffold leaves
-  // this as a stub so you can pick your image provider. The shape is:
-  //
-  //   1. POST to Leonardo /generations with the prompt
-  //   2. Poll the generation status until ready
-  //   3. Download the resulting image bytes
-  //   4. Upload to Supabase Storage under /blog/<slug>.jpg
-  //   5. Return the public URL
-  //
-  // Pseudocode:
-  //   const gen = await leonardo.create({ prompt, ... });
-  //   const url = await leonardo.poll(gen.id);
-  //   const bytes = await fetch(url).then((r) => r.arrayBuffer());
-  //   await supabaseAdmin.storage.from('blog').upload(`${slug}.jpg`, bytes);
-  //   return supabaseAdmin.storage.from('blog').getPublicUrl(`${slug}.jpg`).data.publicUrl;
-
-  void prompt;
-  void slug;
-  void supabaseAdmin;
-  throw new Error('image-gen stub — implement the provider call. See lib/image-gen.ts.');
+  throw new Error(`Unknown IMAGE_PROVIDER "${provider}". Use "none" or "custom".`);
 }
