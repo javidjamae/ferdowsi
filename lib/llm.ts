@@ -33,12 +33,13 @@ export function anthropic(): Anthropic {
 export async function runLLM(
   stage: Stage,
   prompt: string,
-  opts: { maxTokens?: number; temperature?: number } = {}
+  opts: { maxTokens?: number } = {}
 ): Promise<string> {
+  // No temperature: current Claude models deprecate the param (the API
+  // rejects it), and the default sampling is what we want anyway.
   const response = await anthropic().messages.create({
     model: modelFor(stage),
     max_tokens: opts.maxTokens ?? 4096,
-    temperature: opts.temperature ?? 0.7,
     messages: [{ role: 'user', content: prompt }],
   });
   return response.content

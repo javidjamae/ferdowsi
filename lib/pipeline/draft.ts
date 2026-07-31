@@ -52,10 +52,13 @@ export async function runDraft() {
       const draft = await runLLM(
         'write',
         `${context}\n\n---\n\nTopic: ${row.title}\nContext: ${row.description ?? ''}\n\nWrite the post.`,
-        { maxTokens: 4096, temperature: 0.7 }
+        { maxTokens: 4096 }
       );
 
-      const humanized = await humanize(draft, 'standard');
+      // Writers often lead with an H1 of the title; the post page renders
+      // its own <h1> from the title column, so strip a leading H1 to avoid
+      // a doubled title on the public page.
+      const humanized = (await humanize(draft, 'standard')).replace(/^#\s+[^\n]*\n+/, '');
       const slug = slugify(row.title);
 
       let imageUrl: string | null = null;
