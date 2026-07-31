@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import { query } from '@/lib/db';
-import { PromoSlot } from '@/components/PromoSlot';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,7 +55,6 @@ export default async function OverviewPage() {
           </>
         )}
       </div>
-      <PromoSlot placement="overview" />
     </div>
   );
 }
