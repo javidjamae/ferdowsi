@@ -22,7 +22,6 @@ export async function validateAndRewrite(draft: string): Promise<string> {
   for (let i = 0; i < MAX_ITERATIONS; i++) {
     const text = await runLLM('validate', VALIDATOR_PROMPT + current, {
       maxTokens: 6000,
-      temperature: 0.2,
     });
 
     if (text.startsWith('PASS')) return current;

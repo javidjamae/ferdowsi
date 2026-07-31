@@ -93,7 +93,7 @@ export async function runQueue(opts: { force?: boolean } = {}) {
       '[{"title": "...", "description": "target query, audience, angle, evidence", "breakdown": {"evidence": 0-4, "intent": 0-3, "gap": 0-3}}]',
     ].join('\n\n');
 
-    const raw = await runLLM('research', prompt, { maxTokens: 3000, temperature: 0.7 });
+    const raw = await runLLM('research', prompt, { maxTokens: 3000 });
     const topics = extractJSON<ResearchedTopic[]>(raw) ?? [];
     detail.researched = topics.length;
 
